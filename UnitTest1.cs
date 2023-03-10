@@ -8,19 +8,13 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 using WebSupergoo.ABCpdf;
+using System.Xml.Linq;
 
 namespace TestProject9
 {
     public class Tests
     {
         IWebDriver driver;
-
-        // Test data parsing
-        //XmlDocument doc = new XmlDocument();
-        //System.IO.StreamReader raw_data = new System.IO.StreamReader(@":\Users\shilp\source\repos\TestProject9\Testdata.xml");
-        //XmlDocument doc = new XmlDocument();
-        //Doc.Load(@"c:\\Users\shilp\source\repos\TestProject9\Testdata.xml");
-       //testData.Load("@C:\Users\shilp\source\repos\TestProject9\Testdata.xml");
         int timeoutInSeconds = 10;
 
         
@@ -35,9 +29,25 @@ namespace TestProject9
         [Test]
         public void Test1()
         {
+            // Reading test data from xml
+            var testdataFile = "Testdata.xml";
+            var presentDirectory = Directory.GetCurrentDirectory();
+
+            // Determining the full path of file
+            var testdataFilepath = Path.Combine(presentDirectory, testdataFile);
+            XElement testData = XElement.Load(testdataFilepath);
+
+            // Retriving data from XML
+            IEnumerable<string> url = from item in testData.Descendants("Item")
+                                          select (string)item.Attribute("TestUrl");
+            IEnumerable<string> invalidUser = from item in testData.Descendants("Item")
+                                     select (string)item.Attribute("InvalidUser");
+            IEnumerable<string> errorMessageExpected = from item in testData.Descendants("Item")
+                                              select (string)item.Attribute("ErrorMessage");
+
+
             // Navigate to the site
-            //driver.Url = testData.SelectSingleNode("TestUrl").InnerText;
-            driver.Url = "https://twitter.com/";
+            driver.Url = url.ToString();
 
             // Click on login button
             IWebElement loginButton = driver.FindElement(By.XPath("//a[@data-testid='login']"));
@@ -50,7 +60,7 @@ namespace TestProject9
             // Enter invalid id 
             IWebElement usernameBox = driver.FindElement(By.XPath("//span[text()='Phone, email, or username']"));
             usernameBox.Clear();
-            usernameBox.SendKeys("000000000000");
+            usernameBox.SendKeys(invalidUser.ToString());
 
             // Click on next Button 
             IWebElement nextButton = driver.FindElement(By.XPath("//span[text()='Next']"));
@@ -62,8 +72,11 @@ namespace TestProject9
 
             // Capture the error message and verify
             string error_message = driver.FindElements(By.XPath("//div[@data-testid='toast']")).ToString();
-         
+            Assert.That(error_message, Is.EqualTo(errorMessageExpected.ToString()));
+
         }
+
+
 
         [TearDown]
         public void Close_browser()
