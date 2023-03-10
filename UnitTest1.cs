@@ -9,6 +9,7 @@ using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 using WebSupergoo.ABCpdf;
 using System.Xml.Linq;
+using System.Net.Http;
 
 namespace TestProject9
 {
@@ -44,11 +45,20 @@ namespace TestProject9
                                      select (string)item.Attribute("InvalidUser");
             IEnumerable<string> errorMessageExpected = from item in testData.Descendants("Item")
                                               select (string)item.Attribute("ErrorMessage");
+            IEnumerable<string> successResponse = from item in testData.Descendants("Item")
+                                                       select (string)item.Attribute("SuccessResponse");
 
+            // Verify the site is up 
+            var clientHandler = new HttpClientHandler();
+            var httpRequest = new HttpClient(clientHandler);
+            var response = httpRequest.GetAsync(url.ToString());
+            string httpResponse = response.Result.Content.ReadAsStringAsync().Result;
+            Assert.That(httpResponse, Is.EqualTo(successResponse.ToString()));
 
             // Navigate to the site
             driver.Url = url.ToString();
 
+          
             // Click on login button
             IWebElement loginButton = driver.FindElement(By.XPath("//a[@data-testid='login']"));
             loginButton.Click();
